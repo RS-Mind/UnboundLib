@@ -100,11 +100,21 @@ namespace UnboundLib.Utils.UI
                 () =>
                 {
                     ToggleCardsMenuHandler.SetActive(ToggleCardsMenuHandler.cardMenuCanvas.transform, true);
+                    foreach (Animator tabAnimator in ToggleCardsMenuHandler.categoryContent.GetComponentsInChildren<Animator>())
+                    {
+                        tabAnimator.SetTrigger(ToggleCardsMenuHandler.scrollViews[tabAnimator.gameObject.GetComponentInParent<Button>().gameObject.name].gameObject.activeSelf.ToString());
+                    }
                 });
 
             // Create toggle levels button
             MenuHandler.CreateButton("Toggle Levels", modOptionsMenu,
-                () => { ToggleLevelMenuHandler.instance.SetActive(true); });
+                () => {
+                    ToggleLevelMenuHandler.instance.SetActive(true);
+                    foreach (Animator tabAnimator in ToggleLevelMenuHandler.categoryContent.GetComponentsInChildren<Animator>())
+                    {
+                        tabAnimator.SetTrigger(ToggleLevelMenuHandler.scrollViews[tabAnimator.gameObject.GetComponentInParent<Button>().gameObject.name].gameObject.activeSelf.ToString());
+                    }
+                });
 
             // Create menu's for mods with new UI
             foreach (var menu in modMenus)

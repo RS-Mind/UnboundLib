@@ -70,7 +70,7 @@ namespace UnboundLib.Utils
             {
                 if (level.name.Contains("Phys") || level.name.Contains("Destructible") || level.name.Contains("Grape") || level.name.Contains("Serendipity") || level.name.Contains("Jumbo"))
                 {
-                    level.category = "Default physics";
+                    level.category = "Physics";
                 }
             }
 

@@ -26,14 +26,14 @@ namespace UnboundLib.Utils.UI
         public GameObject mapMenuCanvas;
 
         // Dictionary of scrollView names(category name) compared with the transforms of the scroll views
-        private static readonly Dictionary<string, Transform> ScrollViews = new Dictionary<string, Transform>();
+        internal static readonly Dictionary<string, Transform> scrollViews = new Dictionary<string, Transform>();
 
         //List of buttons and toggles to disable when not host
         private readonly List<Button> buttonsToDisable = new List<Button>();
         private readonly List<Toggle> togglesToDisable = new List<Toggle>();
 
         // Content obj in category scroll view
-        private Transform categoryContent;
+        internal static Transform categoryContent;
         // Transform of root scroll views obj
         private Transform scrollViewTrans;
 
@@ -64,7 +64,7 @@ namespace UnboundLib.Utils.UI
         private bool redrawDisabled;
         private bool manualRedraw;
 
-        private string CurrentCategory => (from scroll in ScrollViews where scroll.Value.gameObject.activeInHierarchy select scroll.Key).FirstOrDefault();
+        private string CurrentCategory => (from scroll in scrollViews where scroll.Value.gameObject.activeInHierarchy select scroll.Key).FirstOrDefault();
 
         // if need to toggle all on or off
         private bool toggledAll;
@@ -111,7 +111,7 @@ namespace UnboundLib.Utils.UI
             var searchBar = mapMenuCanvas.transform.Find("MapMenu/Top/InputField").gameObject;
             searchBar.GetComponent<TMP_InputField>().onValueChanged.AddListener(value =>
             {
-                foreach (var level in ScrollViews.SelectMany(scrollViewPair => scrollViewPair.Value.GetComponentsInChildren<Button>(true)))
+                foreach (var level in scrollViews.SelectMany(scrollViewPair => scrollViewPair.Value.GetComponentsInChildren<Button>(true)))
                 {
                     if (value == "")
                     {
@@ -197,8 +197,9 @@ namespace UnboundLib.Utils.UI
                 foreach (var category in LevelManager.categories)
                 {
                     var newScrollView = Instantiate(scrollView, scrollViewTrans);
+                    newScrollView.SetActive(false);
                     newScrollView.name = category;
-                    ScrollViews.Add(category, newScrollView.transform);
+                    scrollViews.Add(category, newScrollView.transform);
                     if (category == "Vanilla")
                     {
                         newScrollView.SetActive(true);
@@ -213,7 +214,7 @@ namespace UnboundLib.Utils.UI
                         levelsThatNeedToRedrawn.Add(level.Key);
                     }
 
-                    var parentScroll = ScrollViews[level.Value.category].Find("Viewport/Content");
+                    var parentScroll = scrollViews[level.Value.category].Find("Viewport/Content");
                     var mapObject = Instantiate(mapObj, parentScroll);
                     mapObject.SetActive(true);
 
@@ -259,7 +260,7 @@ namespace UnboundLib.Utils.UI
                 var viewingText = mapMenuCanvas.transform.Find("MapMenu/Top/Viewing").gameObject.GetComponentInChildren<TextMeshProUGUI>();
 
                 // Create category buttons
-                List<string> sortedCategories = new[] { "Vanilla", "Default physics" }.Concat(LevelManager.categories.OrderBy(c => c).Except(new[] { "Vanilla", "Default physics" })).ToList();
+                List<string> sortedCategories = new[] { "Vanilla", "Physics" }.Concat(LevelManager.categories.OrderBy(c => c).Except(new[] { "Vanilla", "Physics" })).ToList();
                 foreach (var category in sortedCategories)
                 {
                     var categoryObj = Instantiate(categoryButton, categoryContent);
@@ -268,13 +269,22 @@ namespace UnboundLib.Utils.UI
                     categoryObj.GetComponentInChildren<TextMeshProUGUI>().text = category;
                     categoryObj.GetComponent<Button>().onClick.AddListener(() =>
                     {
-                        foreach (var scroll in ScrollViews)
+                        foreach (Animator buttonAnimator in categoryContent.GetComponentsInChildren<Animator>())
+                        {
+                            if (!categoryObj.GetComponentsInChildren<Animator>().Contains(buttonAnimator))
+                                buttonAnimator.SetTrigger("False");
+                        }
+                        foreach (Animator buttonAnimator in categoryObj.GetComponentsInChildren<Animator>())
+                        {
+                            buttonAnimator.SetTrigger("True");
+                        }
+                        foreach (var scroll in scrollViews)
                         {
                             scroll.Value.gameObject.SetActive(false);
                         }
 
-                        ScrollViews[category].GetComponent<ScrollRect>().normalizedPosition = new Vector2(0, 1);
-                        ScrollViews[category].gameObject.SetActive(true);
+                        scrollViews[category].GetComponent<ScrollRect>().normalizedPosition = new Vector2(0, 1);
+                        scrollViews[category].gameObject.SetActive(true);
 
                         viewingText.text = "Viewing: " + category;
                     });
@@ -284,7 +294,7 @@ namespace UnboundLib.Utils.UI
 
                     void UpdateCategoryVisuals(bool enabledVisuals)
                     {
-                        foreach (var obj in ScrollViews.Where(obj => obj.Key == category))
+                        foreach (var obj in scrollViews.Where(obj => obj.Key == category))
                         {
                             obj.Value.Find("Darken").gameObject.SetActive(!enabledVisuals);
                             if (enabledVisuals)
@@ -333,7 +343,7 @@ namespace UnboundLib.Utils.UI
             {
                 lvlObj.transform.Find("Image").GetComponent<Image>().color = Color.white;
                 lvlObj.transform.Find("Background").GetComponent<Image>().color = new Color(0.2352941f, 0.2352941f, 0.2352941f, 0.8470588f);
-                lvlObj.GetComponentInChildren<TextMeshProUGUI>().color = Color.white;
+                lvlObj.GetComponentInChildren<TextMeshProUGUI>().color = new Color(0.5372549f, 0.5372549f, 0.5372549f, 1f);
             }
             else
             {
@@ -341,6 +351,7 @@ namespace UnboundLib.Utils.UI
                 lvlObj.transform.Find("Background").GetComponent<Image>().color = new Color(0.15f, 0.15f, 0.15f);
                 lvlObj.GetComponentInChildren<TextMeshProUGUI>().color = new Color(0.25f, 0.25f, 0.25f);
             }
+            lvlObj.transform.Find("Highlight").gameObject.SetActive(LevelManager.levels[lvlObj.name].selected);
         }
 
         // Update the image of a mapObject
@@ -404,49 +415,16 @@ namespace UnboundLib.Utils.UI
 
         private static void ChangeMapColumnAmountMenus(int amount)
         {
-            Vector2 cellSize = new Vector2(158, 115);
-            float localScale;
-            switch (amount)
-            {
-                case 3:
-                    {
-                        localScale = 1.4f;
-                        break;
-                    }
-                default:
-                    {
-                        localScale = 1f;
-                        break;
-                    }
-                case 5:
-                    {
-                        localScale = 0.85f;
-                        break;
-                    }
-                case 6:
-                    {
-                        localScale = 0.7f;
-                        break;
-                    }
-                case 7:
-                    {
-                        localScale = 0.6f;
-                        break;
-                    }
-                case 8:
-                    {
-                        localScale = 0.525f;
-                        break;
-                    }
-            }
+            Vector2 cellSize = new Vector2(164, 112);
+            float localScale = 4f / amount;
             cellSize *= localScale;
 
             mapAmountText.text = "Maps Per Line: " + amount;
-            foreach (GridLayoutGroup gridLayout in from category in LevelManager.categories select ScrollViews[category].Find("Viewport/Content") into categoryMenu where categoryMenu != null select categoryMenu.gameObject.GetComponent<GridLayoutGroup>())
+            foreach (GridLayoutGroup gridLayout in from category in LevelManager.categories select scrollViews[category].Find("Viewport/Content") into categoryMenu where categoryMenu != null select categoryMenu.gameObject.GetComponent<GridLayoutGroup>())
             {
                 gridLayout.cellSize = cellSize;
                 gridLayout.constraintCount = amount;
-                gridLayout.spacing = new Vector2(0, 20 * localScale);
+                gridLayout.spacing = new Vector2(5f * localScale, 5f * localScale);
             }
         }
 
@@ -561,7 +539,9 @@ namespace UnboundLib.Utils.UI
             RemoveAllRightClickMenus();
             mousePosOnRightClickMenu = position;
             justRightClicked = true;
-            var rightMenu = Instantiate(rightClickMenu, position, Quaternion.identity, mapMenuCanvas.transform.Find("MapMenu"));
+            Vector3 rightMenuWorldPos = MainCam.instance.transform.GetComponent<Camera>().ScreenToWorldPoint(position);
+            rightMenuWorldPos.z = 0;
+            var rightMenu = Instantiate(rightClickMenu, rightMenuWorldPos, Quaternion.identity, mapMenuCanvas.transform.Find("MapMenu"));
             var levelKey = obj.name;
 
             var selectedCount = LevelManager.levels.Count(lvl => lvl.Value.selected);

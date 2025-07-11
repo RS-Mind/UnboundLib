@@ -14,7 +14,7 @@ namespace UnboundLib.Utils.UI
     {
         public static ToggleCardsMenuHandler instance;
 
-        private static readonly Dictionary<string, Transform> scrollViews = new Dictionary<string, Transform>();
+        internal static readonly Dictionary<string, Transform> scrollViews = new Dictionary<string, Transform>();
 
         public static readonly Dictionary<GameObject, Action> cardObjs = new Dictionary<GameObject, Action>();
         public static readonly List<Action> defaultCardActions = new List<Action>();
@@ -30,7 +30,7 @@ namespace UnboundLib.Utils.UI
         private GameObject categoryButtonAsset;
 
         private Transform scrollViewTrans;
-        private Transform categoryContent;
+        internal static Transform categoryContent;
 
         public static bool disableEscapeButton;
         public static bool menuOpenFromOutside;
@@ -227,8 +227,18 @@ namespace UnboundLib.Utils.UI
                     categoryObj.SetActive(true);
                     categoryObj.name = category;
                     categoryObj.GetComponentInChildren<TextMeshProUGUI>().text = category;
+
                     categoryObj.GetComponent<Button>().onClick.AddListener(() =>
                     {
+                        foreach (Animator buttonAnimator in categoryContent.GetComponentsInChildren<Animator>())
+                        {
+                            if (!categoryObj.GetComponentsInChildren<Animator>().Contains(buttonAnimator))
+                                buttonAnimator.SetTrigger("False");
+                        }
+                        foreach (Animator buttonAnimator in categoryObj.GetComponentsInChildren<Animator>())
+                        {
+                            buttonAnimator.SetTrigger("True");
+                        }
                         string categoryText = "Viewing: " + category;
                         if (viewingText.text == categoryText) return;
                         viewingText.text = categoryText;
